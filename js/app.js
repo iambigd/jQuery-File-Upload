@@ -12,90 +12,123 @@
 /*jslint nomen: true, regexp: true */
 /*global window, angular */
 
-(function () {
+(function() {
     'use strict';
 
-    var isOnGitHub = window.location.hostname === 'blueimp.github.io',
-        url = isOnGitHub ? '//jquery-file-upload.appspot.com/' : 'server/php/';
+    // var isOnGitHub = window.location.hostname === 'blueimp.github.io',
+    //     url = isOnGitHub ? '//jquery-file-upload.appspot.com/' : 'server/php/';
 
     angular.module('demo', [
         'blueimp.fileupload'
     ])
-        .config([
-            '$httpProvider', 'fileUploadProvider',
-            function ($httpProvider, fileUploadProvider) {
-                delete $httpProvider.defaults.headers.common['X-Requested-With'];
-                fileUploadProvider.defaults.redirect = window.location.href.replace(
-                    /\/[^\/]*$/,
-                    '/cors/result.html?%s'
-                );
-                if (isOnGitHub) {
-                    // Demo settings:
-                    angular.extend(fileUploadProvider.defaults, {
-                        // Enable image resizing, except for Android and Opera,
-                        // which actually support image resizing, but fail to
-                        // send Blob objects via XHR requests:
-                        disableImageResize: /Android(?!.*Chrome)|Opera/
-                            .test(window.navigator.userAgent),
-                        maxFileSize: 5000000,
-                        acceptFileTypes: /(\.|\/)(gif|jpe?g|png)$/i
-                    });
-                }
-            }
-        ])
+    
+    .config([
+        '$httpProvider', 'fileUploadProvider',
+        function($httpProvider, fileUploadProvider) {
 
-        .controller('DemoFileUploadController', [
-            '$scope', '$http', '$filter', '$window',
-            function ($scope, $http) {
+            //for cros
+            // delete $httpProvider.defaults.headers.common['X-Requested-With'];
+
+            // fileUploadProvider.defaults.redirect = window.location.href.replace(
+            //     /\/[^\/]*$/,
+            //     '/cors/result.html?%s'
+            // );
+            // if (isOnGitHub) {
+            //     // Demo settings:
+            //     angular.extend(fileUploadProvider.defaults, {
+            //         // Enable image resizing, except for Android and Opera,
+            //         // which actually support image resizing, but fail to
+            //         // send Blob objects via XHR requests:
+            //         disableImageResize: /Android(?!.*Chrome)|Opera/
+            //             .test(window.navigator.userAgent),
+            //         maxFileSize: 5000000,
+            //         acceptFileTypes: /(\.|\/)(gif|jpe?g|png)$/i
+            //     });
+            // }
+        }
+    ])
+
+    .controller('DemoFileUploadController', [
+        '$scope', '$http', '$filter', '$window',
+        function($scope, $http) {
+
+            // $scope.options = {
+            //     url: url
+            // };
+            // if (!isOnGitHub) {
+            //     $scope.loadingFiles = true;
+            //     $http.get(url)
+            //         .then(
+            //             function (response) {
+            //                 $scope.loadingFiles = false;
+            //                 $scope.queue = response.data.files || [];
+            //             },
+            //             function () {
+            //                 $scope.loadingFiles = false;
+            //             }
+            //         );
+            // }
+
+            $scope.$on(['fileuploadadd'], function(e, data) {
+
+                console.log('[DemoFileUploadController] fileuploadadd event:');
+                console.log(data);
+                // data.scope = $scope.option('scope');
+                console.log("upload name" + data.files[0].name);
                 $scope.options = {
-                    url: url
+                    url: 'https://140.92.25.66/vfs/services/obj_ops/upload_file',
+                    type: 'POST'
+                    // crossDomain: true,
+                    // sequentialUploads: true,
                 };
-                if (!isOnGitHub) {
-                    $scope.loadingFiles = true;
-                    $http.get(url)
-                        .then(
-                            function (response) {
-                                $scope.loadingFiles = false;
-                                $scope.queue = response.data.files || [];
-                            },
-                            function () {
-                                $scope.loadingFiles = false;
-                            }
-                        );
-                }
-            }
-        ])
 
-        .controller('FileDestroyController', [
-            '$scope', '$http',
-            function ($scope, $http) {
-                var file = $scope.file,
-                    state;
-                if (file.url) {
-                    file.$state = function () {
-                        return state;
-                    };
-                    file.$destroy = function () {
-                        state = 'pending';
-                        return $http({
-                            url: file.deleteUrl,
-                            method: file.deleteType
-                        }).then(
-                            function () {
-                                state = 'resolved';
-                                $scope.clear(file);
-                            },
-                            function () {
-                                state = 'rejected';
-                            }
-                        );
-                    };
-                } else if (!file.$cancel && !file._index) {
-                    file.$cancel = function () {
-                        $scope.clear(file);
-                    };
-                }
+                $scope.options.headers = {
+                    'Authorization': '8a1a08e9-6258-4634-a924-ed5fb2c9893a',
+                    'X-COSA-PATH-Encoding': 'ISO-8859-1'
+                };
+
+            });
+            $scope.$on(['fileuploadsend'], function(e, data) {
+                console.log('[DemoFileUploadController] fileuploadsend:');
+                console.log($scope);
+                console.log(data);
+                data.headers['X-COSA-Full-Path'] = '/' + data.files[0].name;
+                console.log("cosa path:" + $scope.options.headers['X-COSA-Full-Path']);
+            });
+        }
+    ])
+
+    .controller('FileDestroyController', [
+        '$scope', '$http',
+        function($scope, $http) {
+            console.log("[FileDestroyController]");
+            var file = $scope.file,
+                state;
+            if (file.url) {
+                file.$state = function() {
+                    return state;
+                };
+                file.$destroy = function() {
+                    state = 'pending';
+                    return $http({
+                        url: file.deleteUrl,
+                        method: file.deleteType
+                    }).then(
+                        function() {
+                            state = 'resolved';
+                            $scope.clear(file);
+                        },
+                        function() {
+                            state = 'rejected';
+                        }
+                    );
+                };
+            } else if (!file.$cancel && !file._index) {
+                file.$cancel = function() {
+                    $scope.clear(file);
+                };
             }
-        ]);
+        }
+    ]);
 
 }());
